@@ -1,16 +1,49 @@
 from fastai.tabular.all import *
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+import torch
 
+
+#isprime function, could possibly be replaced if you wanted to train a larger range of numbers 
+def is_prime(n):
+    if n <= 1:
+        False
+    for i in range(2, int(n**0.5) + 1):
+        if n % i == 0:
+            False
+    True
+#here are a few functions for features to train the model on, feel free to try and incorperate more and test    
+def sum_of_digits(n):
+    return sum(int(digit) for digit in str(n))
+
+def num_divisors(n):
+    divisors = 0
+    for i in range(1, int(n**0.5) + 1):
+        if n % i == 0:
+            divisors += 2
+    return divisors - 1 if n == int(n**0.5)**2 else divisors
+
+def last_digit(n): return n % 10
+
+def modulo_6(n): return n % 6  
+
+
+def custom_transform(x):
+    return pd.Series({
+        'sum_of_digits': sum_of_digits(x),
+        'num_divisors': num_divisors(x),
+        'last_digit': last_digit(x),
+        'modulo_6': modulo_6(x),
+        'is_prime': is_prime(x)
+    })
+    
 def load_data():
+    # right here is the number range to train on
     numbers = np.arange(1, 90000)
     data = pd.DataFrame({"number": numbers})
     data_transformed = data['number'].apply(custom_transform)
     data = pd.concat([data, data_transformed], axis=1)
     return data
-
-def split_data(data): return train_test_split(data, test_size=0.2, random_state=42)
 
 def train_model(train_data):
     dls = TabularDataLoaders.from_df(train_data, path='.', y_names="is_prime",
@@ -23,9 +56,8 @@ def train_model(train_data):
 
 def main():
     data = load_data()
-    train_data, valid_data = split_data(data)
-    learn = train_model(train_data)
-    print(f"Validation accuracy: {learn.recorder.values[-1][-1]*100:.2f}%")
+    learn = train_model(data)
+    learn.export('primenum.pkl')
 
 if __name__ == "__main__":
     main()
